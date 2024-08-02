@@ -1,1 +1,3 @@
-!*.*
+# Ignore crawler binaries
+crawler
+crawler/
