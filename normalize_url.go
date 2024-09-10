@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func NormalizeURL(rawURL string) (string, error) {
+func normalizeURL(rawURL string) (string, error) {
 	// Add a default scheme if missing
 	if !strings.Contains(rawURL, "://") {
 		rawURL = "http://" + rawURL
