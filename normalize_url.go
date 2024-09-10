@@ -24,6 +24,9 @@ func normalizeURL(rawURL string) (string, error) {
 	}
 
 	// Extract the host and path, ignoring the scheme
-	normalizedURL := strings.TrimSuffix(parsedURL.Host+parsedURL.Path, "/")
-	return normalizedURL, nil
+	fullPath := parsedURL.Host + parsedURL.Path
+	fullPath = strings.ToLower(fullPath)
+	fullPath = strings.TrimSuffix(fullPath, "/")
+
+	return fullPath, nil
 }

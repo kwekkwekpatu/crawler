@@ -31,7 +31,7 @@ func TestNormalizeURL(t *testing.T) {
 			name:          "invalid URL",
 			inputURL:      "http://///invalid-url",
 			expected:      "",
-			errorContains: "couldn't parse URL",
+			errorContains: "invalid URL:",
 		},
 		{
 			name:     "remove trailing slash",
@@ -52,7 +52,7 @@ func TestNormalizeURL(t *testing.T) {
 			name:          "handle invalid URL",
 			inputURL:      `:\\invalidURL`,
 			expected:      "",
-			errorContains: "couldn't parse URL",
+			errorContains: "invalid URL",
 		},
 	}
 
