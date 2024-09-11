@@ -1,3 +1,5 @@
 module github.com/kwekkwekpatu/crawler
 
-go 1.22.5
+go 1.23.0
+
+require golang.org/x/net v0.29.0

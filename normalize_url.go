@@ -7,15 +7,9 @@ import (
 )
 
 func normalizeURL(rawURL string) (string, error) {
-	// Add a default scheme if missing
-	if !strings.Contains(rawURL, "://") {
-		rawURL = "http://" + rawURL
-	}
-
-	// Parse the raw URL
-	parsedURL, err := url.Parse(rawURL)
+	parsedURL, err := getParsed(rawURL)
 	if err != nil {
-		return "", fmt.Errorf("invalid URL: %v", err)
+		return "", err
 	}
 
 	// Additional check for invalid URLs
@@ -29,4 +23,18 @@ func normalizeURL(rawURL string) (string, error) {
 	fullPath = strings.TrimSuffix(fullPath, "/")
 
 	return fullPath, nil
+}
+
+func getParsed(rawURL string) (*url.URL, error) {
+	// Add a default scheme if missing
+	if !strings.Contains(rawURL, "://") {
+		rawURL = "http://" + rawURL
+	}
+
+	// Parse the raw URL
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL: %v", err)
+	}
+	return parsedURL, nil
 }
