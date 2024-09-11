@@ -17,6 +17,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	baseURL := argsWithoutProg[0]
 	maxConcurrency, err := strconv.Atoi(argsWithoutProg[1])
 	if err != nil {
 		fmt.Printf("Invalid second argument: %v reverting to maxConcurrency default of 5", err)
@@ -30,21 +31,19 @@ func main() {
 	}
 	const depthLimit = 50
 
-	cfg, err := configure(argsWithoutProg[0], maxConcurrency, depthLimit, maxPages)
+	cfg, err := configure(baseURL, maxConcurrency, depthLimit, maxPages)
 	if err != nil {
 		fmt.Printf("Error configuring: %v", err)
 	}
 
-	fmt.Printf("starting crawl of: %s", argsWithoutProg[0])
+	fmt.Printf("starting crawl of: %s", baseURL)
 	cfg.mu.Lock()
 	cfg.wg.Add(1)
 	cfg.mu.Unlock()
-	go cfg.crawlPage(argsWithoutProg[0], 0)
+	go cfg.crawlPage(baseURL, 0)
 	cfg.wg.Wait()
 
-	for normalizedURL, count := range cfg.pages {
-		fmt.Printf("%d - %s\n", count, normalizedURL)
-	}
+	printReport(cfg.pages, baseURL)
 
 	os.Exit(0)
 }
