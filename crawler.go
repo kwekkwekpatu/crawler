@@ -7,23 +7,56 @@ import (
 	"strings"
 )
 
-func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
+func (cfg *config) addPageVisit(normalizedURL string) (isFirst bool) {
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
+
+	_, ok := cfg.pages[normalizedURL]
+	if ok {
+		return false
+	}
+	// Else create new entry with count of 1
+	cfg.pages[normalizedURL] = 1
+	return true
+}
+
+func (cfg *config) checkPageLimit() (pageLimitReached bool) {
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
+
+	pageLimitReached = len(cfg.pages) >= cfg.maxPages
+	return pageLimitReached
+}
+
+func (cfg *config) crawlPage(rawCurrentURL string, depth int) {
+	// Acquire semaphore
+	cfg.concurrencyControl <- struct{}{}
+	// Release semaphore when done
+	defer func() {
+		<-cfg.concurrencyControl
+		cfg.wg.Done()
+	}()
+	if cfg.checkPageLimit() {
+		return
+	}
 	//compare base urls of both URLS
+	rawBaseURL := cfg.baseURL.String()
 	parsedBase, err := getParsed(rawBaseURL)
 	if err != nil {
 		fmt.Printf("Cannot parse rawBaseURL: %s Error %s\n", rawBaseURL, err)
+		return
 	}
 
 	parsedCurrent, err := getParsed(rawCurrentURL)
 	if err != nil {
 		fmt.Printf("Cannot parse rawCurrentURL: %s Error %s\n", rawCurrentURL, err)
+		return
 	}
 
-	if parsedBase.Host != parsedCurrent.Host {
+	if parsedBase.Hostname() != parsedCurrent.Hostname() {
 		fmt.Printf("Hold on wait a minute something aint right %s aint in the same domain as %s\n", parsedCurrent.Host, parsedBase.Host)
 		return
 	}
-	fmt.Println("1) Parsed the URLS")
 
 	// Get a normalized version of the rawCurrentURL
 	normalized, err := normalizeURL(rawCurrentURL)
@@ -32,33 +65,41 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
 		return
 	}
 
-	fmt.Println("2) Normalized the currentURL")
 	// If pages already contains normalized raw count++
-	_, ok := pages[normalized]
-	if ok {
-		pages[normalized] = pages[normalized] + 1
-		fmt.Println("3a) Page has been visited before skipping")
+
+	if !cfg.addPageVisit(normalized) {
+		fmt.Printf("Page: %s Has already been visited.\n", rawCurrentURL)
 		return
 	}
-	// Else create new entry with count of 1
-	pages[normalized] = 1
-	fmt.Println("3b) New entry created")
+
 	// Get HTML from current URL
 	resHTML, err := getHTML(rawCurrentURL)
 	if err != nil {
 		fmt.Printf("Cannot get HTML from: %s Error: %s\n", rawCurrentURL, err)
 		return
 	}
-	fmt.Println("4) Got the HTML from the URL")
 	fmt.Printf("Now printing: %s\n", rawCurrentURL)
-	fmt.Println(resHTML)
+
 	// Recursive call for each url in body.
+	if depth >= cfg.depthLimit {
+		fmt.Println("That's far enough. DepthLimit reached.")
+		return
+	}
+
 	urls, err := getURLsFromHTML(resHTML, rawBaseURL)
-	fmt.Println("5) Got the URLS from the HTML")
+	if err != nil {
+		fmt.Printf("Cannot get URLS from HTML at: %s Error: %s\n", rawCurrentURL, err)
+		return
+	}
 	for _, link := range urls {
-		crawlPage(rawBaseURL, link, pages)
+		uniqueLink := link
+		cfg.mu.Lock()
+		cfg.wg.Add(1)
+		cfg.mu.Unlock()
+		go cfg.crawlPage(uniqueLink, depth+1)
 	}
 }
+
 func getHTML(rawURL string) (string, error) {
 	resp, err := http.Get(rawURL)
 	if err != nil {
