@@ -13,6 +13,7 @@ func (cfg *config) addPageVisit(normalizedURL string) (isFirst bool) {
 
 	_, ok := cfg.pages[normalizedURL]
 	if ok {
+		cfg.pages[normalizedURL]++
 		return false
 	}
 	// Else create new entry with count of 1
